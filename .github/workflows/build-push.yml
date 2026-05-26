@@ -97,7 +97,7 @@ jobs:
           - variant: ac
             platforms: linux/amd64,linux/arm/v7,linux/s390x,linux/386,linux/arm64/v8,linux/ppc64le
           - variant: iv
-            platforms: linux/amd64,linux/arm/v7,linux/386,linux/arm64/v8
+            platforms: linux/amd64,linux/386,linux/arm64/v8
           - variant: dj
             platforms: linux/amd64,linux/386,linux/arm64/v8
 
