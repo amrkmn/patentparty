@@ -1,4 +1,4 @@
-name: ${NAME}
+name: build
 
 when:
     - event: cron
