@@ -16,9 +16,20 @@ This repo only builds docker images, since that is the only real affected platfo
 The docker images are published to [Quay.io](https://quay.io/repository/amrkmn/patentparty).  
 patentparty supports the same CPU architectures as the corresponding official copyparty images.
 
-The Crow CI build can be triggered manually or by a Crow cron job.
+The GitHub Actions build runs on a schedule and can also be triggered manually.
 
 Images are published per variant under `quay.io/amrkmn/patentparty/<variant>`.
+
+# GitHub Actions
+
+The workflow in [`.github/workflows/build.yml`](.github/workflows/build.yml) checks the latest copyparty release, builds all supported variants when a new version is available, pushes the images to Quay.io, and records the built version in [`.github/upstream.txt`](.github/upstream.txt).
+
+Configure these repository secrets before running it:
+
+- `QUAY_USERNAME`
+- `QUAY_PASSWORD`
+
+A manual run can set `version_override` to build a specific copyparty tag.
 
 ### ac
 
@@ -43,7 +54,7 @@ Refer to the official copyparty documentation for usage.
 
 # Building
 
-If you want to build the images yourself instead of using the images pushed by Crow CI,
+If you want to build the images yourself instead of using the images pushed by GitHub Actions,
 you can clone this repo or download the Dockerfile and then build the variant (ac, iv or dj) of your choice by running:
 
 ```sh

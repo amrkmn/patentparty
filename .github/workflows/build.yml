@@ -1,0 +1,135 @@
+name: build
+
+on:
+    workflow_dispatch:
+        inputs:
+            version_override:
+                description: "copyparty tag to build"
+                required: false
+                type: string
+    schedule:
+        - cron: "17 3 * * *"
+
+permissions:
+    actions: write
+    contents: write
+
+concurrency:
+    group: patentparty-build
+    cancel-in-progress: false
+
+env:
+    IMAGE_REPO: quay.io/amrkmn/patentparty
+
+jobs:
+    prepare:
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            should_build: ${{ steps.version.outputs.should_build }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Determine copyparty version
+              id: version
+              env:
+                  VERSION_OVERRIDE: ${{ inputs.version_override }}
+              run: |
+                  set -euo pipefail
+
+                  version="${VERSION_OVERRIDE:-}"
+                  if [ -z "$version" ]; then
+                    version="$(curl -fsSL --retry 5 --retry-all-errors \
+                      https://api.github.com/repos/9001/copyparty/releases/latest \
+                      | jq -r '.tag_name | ltrimstr("v")')"
+                  fi
+
+                  if [ -z "$version" ] || [ "$version" = "null" ]; then
+                    echo "Could not determine upstream copyparty version" >&2
+                    exit 1
+                  fi
+
+                  current="$(cat .github/upstream.txt 2>/dev/null || true)"
+                  should_build=true
+                  if [ -z "${VERSION_OVERRIDE:-}" ] && [ "$version" = "$current" ]; then
+                    should_build=false
+                  fi
+
+                  {
+                    echo "version=$version"
+                    echo "should_build=$should_build"
+                  } >> "$GITHUB_OUTPUT"
+
+                  echo "copyparty $version; should_build=$should_build"
+
+    build:
+        needs: prepare
+        if: needs.prepare.outputs.should_build == 'true'
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - variant: ac
+                      platforms: linux/amd64,linux/arm/v7,linux/s390x,linux/386,linux/arm64/v8,linux/ppc64le
+                    - variant: iv
+                      platforms: linux/amd64,linux/386,linux/arm64/v8
+                    - variant: dj
+                      platforms: linux/amd64,linux/386,linux/arm64/v8
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to Quay.io
+              uses: docker/login-action@v3
+              with:
+                  registry: quay.io
+                  username: ${{ secrets.QUAY_USERNAME }}
+                  password: ${{ secrets.QUAY_PASSWORD }}
+
+            - name: Build and push image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  platforms: ${{ matrix.platforms }}
+                  push: true
+                  build-args: |
+                      VARIANT=${{ matrix.variant }}
+                      IMAGE_TAG=${{ needs.prepare.outputs.version }}
+                  tags: |
+                      ${{ env.IMAGE_REPO }}/${{ matrix.variant }}:${{ needs.prepare.outputs.version }}
+                      ${{ env.IMAGE_REPO }}/${{ matrix.variant }}:latest
+                  cache-from: type=gha,scope=${{ matrix.variant }}
+                  cache-to: type=gha,scope=${{ matrix.variant }},mode=max
+
+    record:
+        needs:
+            - prepare
+            - build
+        if: needs.prepare.outputs.should_build == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Record built version
+              run: |
+                  set -euo pipefail
+
+                  printf '%s\n' "${{ needs.prepare.outputs.version }}" > .github/upstream.txt
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add .github/upstream.txt
+                  git diff --cached --quiet && exit 0
+
+                  git commit -m "chore: built copyparty ${{ needs.prepare.outputs.version }} [skip ci]"
+                  git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+                  git push origin "HEAD:${GITHUB_REF_NAME}"
