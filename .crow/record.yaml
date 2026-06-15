@@ -18,9 +18,22 @@ clone:
 steps:
     - name: record
       image: docker.io/library/alpine:3.22
+      environment:
+          FORGEJO_SSH_KEY:
+              from_secret: ssh_key
+          FORGEJO_REMOTE:
+              from_secret: forgejo_remote
       commands: |
           set -euo pipefail
-          apk add --no-cache curl git jq
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+
+          apk add --no-cache curl git jq openssh-client
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$FORGEJO_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          git remote set-url origin "$FORGEJO_REMOTE"
 
           version_override="${VERSION_OVERRIDE:-}"
           if [ -n "$version_override" ]; then
@@ -47,5 +60,11 @@ steps:
           git config user.name "crow-ci[bot]"
           git config user.email "crow-ci[bot]@users.noreply.noz.one"
           git add .crow/.upstream.txt
-          git commit -m "chore: built Copyparty ${version}" || exit 0
-          git push
+
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+
+          git commit -m "chore: built Copyparty ${version} [skip ci]"
+          git pull --rebase --autostash origin "${CI_COMMIT_BRANCH:-${CI_REPO_DEFAULT_BRANCH:-master}}"
+          git push origin "HEAD:${CI_COMMIT_BRANCH:-${CI_REPO_DEFAULT_BRANCH:-master}}"
