@@ -76,6 +76,8 @@ steps:
           platforms: ${PLATFORMS}
           tags_file: .tags
           env_file: .ci/build.env
+          cache_images:
+              - quay.io/amrkmn/patentparty/buildcache:${VARIANT}
           build_args_from_env:
               - VARIANT
               - IMAGE_TAG
