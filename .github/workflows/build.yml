@@ -8,7 +8,7 @@ name: build
                 required: false
                 type: string
     schedule:
-        - cron: "17 3 * * *"
+        - cron: "17 * * * *"
 
 permissions:
     actions: write
