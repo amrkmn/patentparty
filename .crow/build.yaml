@@ -69,6 +69,7 @@ steps:
 
     - name: build
       image: quay.io/amrkmn/crow/docker-buildx:2
+      privileged: true
       settings:
           repo: quay.io/amrkmn/patentparty/${VARIANT}
           registry: https://quay.io
