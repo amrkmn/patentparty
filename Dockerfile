@@ -1,7 +1,7 @@
 ARG VARIANT=dj
 ARG IMAGE_TAG=latest
 
-FROM ghcr.io/9001/copyparty-${VARIANT}:${IMAGE_TAG}
+FROM copyparty/${VARIANT}:${IMAGE_TAG}
 
 ARG VARIANT
 
