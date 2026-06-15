@@ -2,7 +2,7 @@ name: record
 
 when:
     - event: cron
-      sync: record
+      cron: record
     - event: manual
 
 depends_on:
@@ -36,7 +36,7 @@ steps:
 
           git remote set-url origin "$FORGEJO_REMOTE"
 
-          version_override="${VERSION_OVERRIDE:-}"
+          version_override="$${VERSION_OVERRIDE:-}"
           if [ -n "$version_override" ]; then
             version="$version_override"
           else
@@ -48,7 +48,7 @@ steps:
               --max-time 30 \
               "https://api.github.com/repos/9001/copyparty/releases/latest" \
               | jq -r '.tag_name')"
-            version="${raw_tag#v}"
+            version="$(printf '%s' "$raw_tag" | sed 's/^v//')"
           fi
 
           if [ -z "$version" ] || [ "$version" = "null" ]; then
@@ -66,6 +66,10 @@ steps:
             exit 0
           fi
 
-          git commit -m "chore: built Copyparty ${version} [skip ci]"
-          git pull --rebase --autostash origin "${CI_COMMIT_BRANCH:-${CI_REPO_DEFAULT_BRANCH:-master}}"
-          git push origin "HEAD:${CI_COMMIT_BRANCH:-${CI_REPO_DEFAULT_BRANCH:-master}}"
+          git commit -m "chore: built Copyparty $version [skip ci]"
+          branch="$${CI_COMMIT_BRANCH:-}"
+          if [ -z "$branch" ]; then
+            branch="$${CI_REPO_DEFAULT_BRANCH:-master}"
+          fi
+          git pull --rebase --autostash origin "$branch"
+          git push origin "HEAD:$branch"

@@ -2,7 +2,7 @@ name: build
 
 when:
     - event: cron
-      sync: build
+      cron: build
     - event: manual
 
 clone:
@@ -30,7 +30,7 @@ steps:
           set -euo pipefail
           apk add --no-cache curl jq
 
-          version_override="${VERSION_OVERRIDE:-}"
+          version_override="$${VERSION_OVERRIDE:-}"
           if [ -n "$version_override" ]; then
             version="$version_override"
           else
@@ -42,7 +42,7 @@ steps:
               --max-time 30 \
               "https://api.github.com/repos/9001/copyparty/releases/latest" \
               | jq -r '.tag_name')"
-            version="${raw_tag#v}"
+            version="$(printf '%s' "$raw_tag" | sed 's/^v//')"
           fi
 
           if [ -z "$version" ] || [ "$version" = "null" ]; then
@@ -52,7 +52,7 @@ steps:
 
           current="$(cat .crow/.upstream.txt 2>/dev/null || true)"
           if [ -z "$version_override" ] && [ "$version" = "$current" ]; then
-            echo "copyparty ${version} already built; skipping"
+            echo "copyparty $version already built; skipping"
             exit 78
           fi
 
