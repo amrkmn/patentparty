@@ -2,6 +2,7 @@ name: record
 
 when:
     - event: cron
+      sync: record
     - event: manual
 
 depends_on:

@@ -2,6 +2,7 @@ name: build
 
 when:
     - event: cron
+      sync: build
     - event: manual
 
 clone:
