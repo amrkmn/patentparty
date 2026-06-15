@@ -1,82 +1,83 @@
 name: ${NAME}
 
 when:
-  - event: [cron, manual]
+    - event: cron
+    - event: manual
 
 clone:
-  - name: clone
-    image: quay.io/amrkmn/crow/clone:1
-    settings:
-      partial: false
+    - name: clone
+      image: quay.io/amrkmn/crow/clone:1
+      settings:
+          partial: false
 
 matrix:
-  include:
-    - NAME: build-ac
-      VARIANT: ac
-      PLATFORMS: linux/amd64,linux/arm/v7,linux/s390x,linux/386,linux/arm64/v8,linux/ppc64le
-    - NAME: build-iv
-      VARIANT: iv
-      PLATFORMS: linux/amd64,linux/386,linux/arm64/v8
-    - NAME: build-dj
-      VARIANT: dj
-      PLATFORMS: linux/amd64,linux/386,linux/arm64/v8
+    include:
+        - NAME: build-ac
+          VARIANT: ac
+          PLATFORMS: linux/amd64,linux/arm/v7,linux/s390x,linux/386,linux/arm64/v8,linux/ppc64le
+        - NAME: build-iv
+          VARIANT: iv
+          PLATFORMS: linux/amd64,linux/386,linux/arm64/v8
+        - NAME: build-dj
+          VARIANT: dj
+          PLATFORMS: linux/amd64,linux/386,linux/arm64/v8
 
 steps:
-  - name: prepare
-    image: docker.io/library/alpine:3.22
-    commands: |
-      set -euo pipefail
-      apk add --no-cache curl jq
+    - name: prepare
+      image: docker.io/library/alpine:3.22
+      commands: |
+          set -euo pipefail
+          apk add --no-cache curl jq
 
-      version_override="${VERSION_OVERRIDE:-}"
-      if [ -n "$version_override" ]; then
-        version="$version_override"
-      else
-        raw_tag="$(curl --silent --show-error --fail \
-          --retry 5 \
-          --retry-all-errors \
-          --retry-delay 2 \
-          --connect-timeout 10 \
-          --max-time 30 \
-          "https://api.github.com/repos/9001/copyparty/releases/latest" \
-          | jq -r '.tag_name')"
-        version="${raw_tag#v}"
-      fi
+          version_override="${VERSION_OVERRIDE:-}"
+          if [ -n "$version_override" ]; then
+            version="$version_override"
+          else
+            raw_tag="$(curl --silent --show-error --fail \
+              --retry 5 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "https://api.github.com/repos/9001/copyparty/releases/latest" \
+              | jq -r '.tag_name')"
+            version="${raw_tag#v}"
+          fi
 
-      if [ -z "$version" ] || [ "$version" = "null" ]; then
-        echo "Could not determine upstream copyparty version" >&2
-        exit 1
-      fi
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            echo "Could not determine upstream copyparty version" >&2
+            exit 1
+          fi
 
-      current="$(cat .crow/.upstream.txt 2>/dev/null || true)"
-      if [ -z "$version_override" ] && [ "$version" = "$current" ]; then
-        echo "copyparty ${version} already built; skipping"
-        exit 78
-      fi
+          current="$(cat .crow/.upstream.txt 2>/dev/null || true)"
+          if [ -z "$version_override" ] && [ "$version" = "$current" ]; then
+            echo "copyparty ${version} already built; skipping"
+            exit 78
+          fi
 
-      mkdir -p .ci
-      {
-        printf 'VARIANT=%s\n' "${VARIANT}"
-        printf 'IMAGE_TAG=%s\n' "$version"
-      } > .ci/build.env
+          mkdir -p .ci
+          {
+            printf 'VARIANT=%s\n' "${VARIANT}"
+            printf 'IMAGE_TAG=%s\n' "$version"
+          } > .ci/build.env
 
-      {
-        printf '%s\n' "$version"
-        printf 'latest\n'
-      } > .tags
+          {
+            printf '%s\n' "$version"
+            printf 'latest\n'
+          } > .tags
 
-  - name: build
-    image: quay.io/amrkmn/crow/docker-buildx:2
-    settings:
-      repo: quay.io/amrkmn/patentparty/${VARIANT}
-      registry: https://quay.io
-      platforms: ${PLATFORMS}
-      tags_file: .tags
-      env_file: .ci/build.env
-      build_args_from_env:
-        - VARIANT
-        - IMAGE_TAG
-      username:
-        from_secret: quay_username
-      password:
-        from_secret: quay_password
+    - name: build
+      image: quay.io/amrkmn/crow/docker-buildx:2
+      settings:
+          repo: quay.io/amrkmn/patentparty/${VARIANT}
+          registry: https://quay.io
+          platforms: ${PLATFORMS}
+          tags_file: .tags
+          env_file: .ci/build.env
+          build_args_from_env:
+              - VARIANT
+              - IMAGE_TAG
+          username:
+              from_secret: quay_username
+          password:
+              from_secret: quay_password

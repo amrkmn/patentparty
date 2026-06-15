@@ -1,4 +1,5 @@
 # patentparty
+
 ### copyparty with patent-restricted features added back in
 
 patentparty is a drop-in replacement for the official Docker image of [copyparty](https://github.com/9001/copyparty).  
@@ -10,6 +11,7 @@ All credits for the copyparty application go to the original author, [ed, "9001"
 This repository was taken from and/or inspired by [0x464e/patentparty](https://github.com/0x464e/patentparty).
 
 # Docker Images
+
 This repo only builds docker images, since that is the only real affected platform.  
 The docker images are published to [Quay.io](https://quay.io/repository/amrkmn/patentparty).  
 patentparty supports the same CPU architectures as the corresponding official copyparty images.
@@ -19,14 +21,17 @@ The Crow CI build can be triggered manually or by a Crow cron job.
 Images are published per variant under `quay.io/amrkmn/patentparty/<variant>`.
 
 ### ac
+
 - `quay.io/amrkmn/patentparty/ac:1.20.10` - version tagged
 - `quay.io/amrkmn/patentparty/ac:latest` - latest ac version
 
 ### iv
+
 - `quay.io/amrkmn/patentparty/iv:1.20.10` - version tagged
 - `quay.io/amrkmn/patentparty/iv:latest` - latest iv version
 
 ### dj
+
 - `quay.io/amrkmn/patentparty/dj:1.20.10` - version tagged
 - `quay.io/amrkmn/patentparty/dj:latest` - latest dj version
 
@@ -37,6 +42,7 @@ Any and every config option, feature, etc. works exactly the same as with the of
 Refer to the official copyparty documentation for usage.
 
 # Building
+
 If you want to build the images yourself instead of using the images pushed by Crow CI,
 you can clone this repo or download the Dockerfile and then build the variant (ac, iv or dj) of your choice by running:
 

@@ -1,50 +1,51 @@
 name: record
 
 when:
-  - event: [cron, manual]
+    - event: cron
+    - event: manual
 
 depends_on:
-  - build-ac
-  - build-iv
-  - build-dj
+    - build-ac
+    - build-iv
+    - build-dj
 
 clone:
-  - name: clone
-    image: quay.io/amrkmn/crow/clone:1
-    settings:
-      partial: false
+    - name: clone
+      image: quay.io/amrkmn/crow/clone:1
+      settings:
+          partial: false
 
 steps:
-  - name: record
-    image: docker.io/library/alpine:3.22
-    commands: |
-      set -euo pipefail
-      apk add --no-cache curl git jq
+    - name: record
+      image: docker.io/library/alpine:3.22
+      commands: |
+          set -euo pipefail
+          apk add --no-cache curl git jq
 
-      version_override="${VERSION_OVERRIDE:-}"
-      if [ -n "$version_override" ]; then
-        version="$version_override"
-      else
-        raw_tag="$(curl --silent --show-error --fail \
-          --retry 5 \
-          --retry-all-errors \
-          --retry-delay 2 \
-          --connect-timeout 10 \
-          --max-time 30 \
-          "https://api.github.com/repos/9001/copyparty/releases/latest" \
-          | jq -r '.tag_name')"
-        version="${raw_tag#v}"
-      fi
+          version_override="${VERSION_OVERRIDE:-}"
+          if [ -n "$version_override" ]; then
+            version="$version_override"
+          else
+            raw_tag="$(curl --silent --show-error --fail \
+              --retry 5 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "https://api.github.com/repos/9001/copyparty/releases/latest" \
+              | jq -r '.tag_name')"
+            version="${raw_tag#v}"
+          fi
 
-      if [ -z "$version" ] || [ "$version" = "null" ]; then
-        echo "Could not determine upstream copyparty version" >&2
-        exit 1
-      fi
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            echo "Could not determine upstream copyparty version" >&2
+            exit 1
+          fi
 
-      printf '%s\n' "$version" > .crow/.upstream.txt
+          printf '%s\n' "$version" > .crow/.upstream.txt
 
-      git config user.name "crow-ci[bot]"
-      git config user.email "crow-ci[bot]@users.noreply.noz.one"
-      git add .crow/.upstream.txt
-      git commit -m "chore: built Copyparty ${version}" || exit 0
-      git push
+          git config user.name "crow-ci[bot]"
+          git config user.email "crow-ci[bot]@users.noreply.noz.one"
+          git add .crow/.upstream.txt
+          git commit -m "chore: built Copyparty ${version}" || exit 0
+          git push
